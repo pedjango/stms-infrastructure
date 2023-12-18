@@ -1,0 +1,56 @@
+version: '3'
+
+networks:
+  stms-keycloak-net:
+
+volumes:
+  main-datastore:
+  keycloak-datastore:
+
+services:
+  stms-database:
+    container_name: stms-database
+    image: postgres:14.1-alpine
+    volumes:
+      - main-datastore:/var/lib/postgresql/data
+      # Create initial schemas
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/10-init.sql
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: stms-user
+      POSTGRES_PASSWORD: stms.4dm!n
+
+  stms-keycloak-database:
+    container_name: stms-keycloak-database
+    image: postgres:9.6
+    volumes:
+      - keycloak-datastore:/var/lib/postgresql/data
+    networks:
+      - stms-keycloak-net
+    ports:
+      - "25432:5432"
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: keycloak
+
+  stms-keycloak:
+    container_name: stms-keycloak
+    image: bitnami/keycloak:22.0.4
+    depends_on:
+      - stms-keycloak-database
+    networks:
+      - stms-keycloak-net
+    ports:
+      - "8180:8080"
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: stms-keycloak-database
+      DB_PORT: 5432
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_PASSWORD: keycloak
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+
